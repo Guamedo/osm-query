@@ -11,11 +11,11 @@ const redIcon = L.icon({
   popupAnchor: [-3, -76],
 });
 
-async function getPublicRestroomFromPos(lat, lon) {
+async function getPublicRestroomFromPos(lat, lon, dist = 20) {
   const centerLat = lat;
   const centerLon = lon;
 
-  const distKm = 20;
+  const distKm = dist;
 
   const distLat = distKm / 111.111;
   const distLon = distKm / (111.111 * Math.cos(centerLat * (Math.PI / 180)));
@@ -27,6 +27,35 @@ async function getPublicRestroomFromPos(lat, lon) {
   const result = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
     body: 'data=' + encodeURIComponent(`[out:json][timeout:120];node["amenity"="toilets"](${bbox});out geom;`),
+  }).then((data) => data.json());
+
+  let nodes = result?.elements ?? [];
+
+  nodes.sort((a, b) => {
+    const distA = Math.sqrt((a.lat - centerLat) ** 2 + (a.lon - centerLon) ** 2);
+    const distB = Math.sqrt((b.lat - centerLat) ** 2 + (b.lon - centerLon) ** 2);
+    return distA - distB;
+  });
+
+  return nodes;
+}
+
+async function getDrinkingWaterFromPos(lat, lon, dist = 10) {
+  const centerLat = lat;
+  const centerLon = lon;
+
+  const distKm = dist;
+
+  const distLat = distKm / 111.111;
+  const distLon = distKm / (111.111 * Math.cos(centerLat * (Math.PI / 180)));
+
+  const bbox = `${centerLat - distLat / 2},${centerLon - distLon / 2},${centerLat + distLat / 2},${
+    centerLon + distLon / 2
+  }`;
+
+  const result = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: 'data=' + encodeURIComponent(`[out:json][timeout:120];node["amenity"="drinking_water"](${bbox});out geom;`),
   }).then((data) => data.json());
 
   let nodes = result?.elements ?? [];
@@ -64,13 +93,16 @@ async function main() {
           const lat = position?.coords?.latitude;
           const lon = position?.coords?.longitude;
 
-          console.log(lat, lon);
-
           L.marker([lat, lon], { icon: redIcon }).addTo(map);
 
           map.setView([lat, lon], 14);
 
-          const nodes = await getPublicRestroomFromPos(43.264331, -2.9207012);
+          const findSelection = document.querySelector('input[name="search-tag"]:checked').value;
+
+          const nodes =
+            findSelection === 'toilet'
+              ? await getPublicRestroomFromPos(lat, lon)
+              : await getDrinkingWaterFromPos(lat, lon);
           for (const node of nodes) {
             const m = L.marker([node.lat, node.lon]).addTo(map);
             m.on('click', () => window.open(`https://www.google.com.sa/maps/search/${node.lat},${node.lon}`, '_blank'));
