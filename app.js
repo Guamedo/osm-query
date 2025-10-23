@@ -99,15 +99,22 @@ async function main() {
 
           const findSelection = document.querySelector('input[name="search-tag"]:checked').value;
 
-          const nodes =
-            findSelection === 'toilet'
-              ? await getPublicRestroomFromPos(lat, lon)
-              : await getDrinkingWaterFromPos(lat, lon);
-          for (const node of nodes) {
-            const m = L.marker([node.lat, node.lon]).addTo(map);
-            m.on('click', () => window.open(`https://www.google.com.sa/maps/search/${node.lat},${node.lon}`, '_blank'));
+          try {
+            const nodes =
+              findSelection === 'toilet'
+                ? await getPublicRestroomFromPos(lat, lon)
+                : await getDrinkingWaterFromPos(lat, lon);
+            for (const node of nodes) {
+              const m = L.marker([node.lat, node.lon]).addTo(map);
+              m.on('click', () =>
+                window.open(`https://www.google.com.sa/maps/search/${node.lat},${node.lon}`, '_blank')
+              );
+            }
+          } catch (err) {
+            console.warn('Error finding');
+          } finally {
+            findBtn.innerHTML = 'Find';
           }
-          findBtn.innerHTML = 'Find';
         },
         (error) => {
           const errors = {
