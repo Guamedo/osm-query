@@ -1,5 +1,16 @@
 import * as L from './leaflet/leaflet-src.esm.js';
 
+const redIcon = L.icon({
+  iconUrl: 'leaflet/images/marker-icon-red.png',
+  shadowUrl: 'leaflet/images/marker-shadow.png',
+
+  iconSize: [25, 41],
+  shadowSize: [41, 41],
+  iconAnchor: [12, 40],
+  shadowAnchor: [12, 40],
+  popupAnchor: [-3, -76],
+});
+
 async function getPublicRestroomFromPos(lat, lon) {
   const centerLat = lat;
   const centerLon = lon;
@@ -7,7 +18,7 @@ async function getPublicRestroomFromPos(lat, lon) {
   const distKm = 20;
 
   const distLat = distKm / 111.111;
-  const distLon = distKm / (111.111 * Math.cos(centerLat));
+  const distLon = distKm / (111.111 * Math.cos(centerLat * (Math.PI / 180)));
 
   const bbox = `${centerLat - distLat / 2},${centerLon - distLon / 2},${centerLat + distLat / 2},${
     centerLon + distLon / 2
@@ -46,21 +57,36 @@ async function main() {
     });
 
     if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        findBtn.innerHTML = 'Finding...';
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          findBtn.innerHTML = 'Finding...';
 
-        const lat = position?.coords?.latitude;
-        const lon = position?.coords?.longitude;
+          const lat = position?.coords?.latitude;
+          const lon = position?.coords?.longitude;
 
-        map.setView([lat, lon], 14);
+          console.log(lat, lon);
 
-        const nodes = await getPublicRestroomFromPos(43.264331, -2.9207012);
-        for (const node of nodes) {
-          const m = L.marker([node.lat, node.lon]).addTo(map);
-          m.on('click', () => window.open(`https://www.google.com.sa/maps/search/${node.lat},${node.lon}`, '_blank'));
-        }
-        findBtn.innerHTML = 'Find';
-      });
+          L.marker([lat, lon], { icon: redIcon }).addTo(map);
+
+          map.setView([lat, lon], 14);
+
+          const nodes = await getPublicRestroomFromPos(43.264331, -2.9207012);
+          for (const node of nodes) {
+            const m = L.marker([node.lat, node.lon]).addTo(map);
+            m.on('click', () => window.open(`https://www.google.com.sa/maps/search/${node.lat},${node.lon}`, '_blank'));
+          }
+          findBtn.innerHTML = 'Find';
+        },
+        (error) => {
+          const errors = {
+            1: 'Permission denied',
+            2: 'Position unavailable',
+            3: 'Request timeout',
+          };
+          alert('Error: ' + errors[error.code]);
+        },
+        { enableHighAccuracy: true }
+      );
     } else {
       console.warn('Geolocation is not available in this browser');
     }
