@@ -11,7 +11,7 @@ const redIcon = L.icon({
   popupAnchor: [-3, -76],
 });
 
-function getDistanceInKm(lat1, lon1, lat2, lon2) {
+function getDistanceInMetres(lat1, lon1, lat2, lon2) {
   const R = 6371e3; // metres
 
   const φ1 = (lat1 * Math.PI) / 180; // φ, λ in radians
@@ -36,17 +36,16 @@ function getElementsData(elements, centerLat, centerLon) {
           lat: e.lat,
           lon: e.lon,
           tags: e.tags,
-          distToCenter: getDistanceInKm(e.lat, e.lon, centerLat, centerLon),
+          distToCenter: getDistanceInMetres(e.lat, e.lon, centerLat, centerLon),
         };
       } else {
         const wayLat = (e.bounds.minlat + e.bounds.maxlat) / 2;
         const wayLon = (e.bounds.minlon + e.bounds.maxlon) / 2;
-
         return {
           lat: wayLat,
           lon: wayLon,
           tags: e.tags,
-          distToCenter: getDistanceInKm(wayLat, wayLon, centerLat, centerLon),
+          distToCenter: getDistanceInMetres(wayLat, wayLon, centerLat, centerLon),
         };
       }
     });
