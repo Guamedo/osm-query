@@ -11,6 +11,63 @@ const redIcon = L.icon({
   popupAnchor: [-3, -76],
 });
 
+function getDistanceInKm(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // metres
+
+  const φ1 = (lat1 * Math.PI) / 180; // φ, λ in radians
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  const d = R * c; // in metres
+
+  return d;
+}
+
+function getElementsData(elements, centerLat, centerLon) {
+  const elementsData = elements
+    .filter((e) => e.type === 'node' || e.type === 'way')
+    .map((e) => {
+      if (e.type === 'node') {
+        return {
+          lat: e.lat,
+          lon: e.lon,
+          tags: e.tags,
+          distToCenter: getDistanceInKm(e.lat, e.lon, centerLat, centerLon),
+        };
+      } else {
+        const wayLat = (e.bounds.minlat + e.bounds.maxlat) / 2;
+        const wayLon = (e.bounds.minlon + e.bounds.maxlon) / 2;
+
+        return {
+          lat: wayLat,
+          lon: wayLon,
+          tags: e.tags,
+          distToCenter: getDistanceInKm(wayLat, wayLon, centerLat, centerLon),
+        };
+      }
+    });
+  return elementsData;
+}
+
+async function queryOverpass(query, centerLat, centerLon) {
+  const result = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: 'data=' + encodeURIComponent(query),
+  }).then((data) => data.json());
+
+  let elementsData = getElementsData(result?.elements ?? [], centerLat, centerLon);
+
+  elementsData.sort((a, b) => {
+    return a.distToCenter - b.distToCenter;
+  });
+
+  return elementsData;
+}
+
 async function getPublicRestroomFromPos(lat, lon, dist = 20) {
   const centerLat = lat;
   const centerLon = lon;
@@ -24,20 +81,11 @@ async function getPublicRestroomFromPos(lat, lon, dist = 20) {
     centerLon + distLon / 2
   }`;
 
-  const result = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: 'data=' + encodeURIComponent(`[out:json][timeout:120];node["amenity"="toilets"](${bbox});out geom;`),
-  }).then((data) => data.json());
-
-  let nodes = result?.elements ?? [];
-
-  nodes.sort((a, b) => {
-    const distA = Math.sqrt((a.lat - centerLat) ** 2 + (a.lon - centerLon) ** 2);
-    const distB = Math.sqrt((b.lat - centerLat) ** 2 + (b.lon - centerLon) ** 2);
-    return distA - distB;
-  });
-
-  return nodes;
+  return await queryOverpass(
+    `[out:json][timeout:120];nwr["amenity"="toilets"](${bbox});out geom;`,
+    centerLat,
+    centerLon
+  );
 }
 
 async function getDrinkingWaterFromPos(lat, lon, dist = 10) {
@@ -53,20 +101,11 @@ async function getDrinkingWaterFromPos(lat, lon, dist = 10) {
     centerLon + distLon / 2
   }`;
 
-  const result = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: 'data=' + encodeURIComponent(`[out:json][timeout:120];node["amenity"="drinking_water"](${bbox});out geom;`),
-  }).then((data) => data.json());
-
-  let nodes = result?.elements ?? [];
-
-  nodes.sort((a, b) => {
-    const distA = Math.sqrt((a.lat - centerLat) ** 2 + (a.lon - centerLon) ** 2);
-    const distB = Math.sqrt((b.lat - centerLat) ** 2 + (b.lon - centerLon) ** 2);
-    return distA - distB;
-  });
-
-  return nodes;
+  return await queryOverpass(
+    `[out:json][timeout:120];nwr["amenity"="drinking_water"](${bbox});out geom;`,
+    centerLat,
+    centerLon
+  );
 }
 
 async function main() {
@@ -106,11 +145,15 @@ async function main() {
                 : await getDrinkingWaterFromPos(lat, lon);
             for (const node of nodes) {
               const m = L.marker([node.lat, node.lon]).addTo(map);
-              m.on('click', () =>
-                window.open(`https://www.google.com.sa/maps/search/${node.lat},${node.lon}`, '_blank')
-              );
+              const popupBody = `
+                <p style="margin: 0"> Distance: ${(node.distToCenter / 1000).toFixed(3) + ' Km'} </p> 
+                <a href="https://www.google.com.sa/maps/search/${node.lat},${node.lon}" target="_blank">Navigate</a>
+              `;
+              m.bindPopup(popupBody);
             }
           } catch (err) {
+            console.error(err);
+
             console.warn('Error finding');
           } finally {
             findBtn.innerHTML = 'Find';
