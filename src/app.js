@@ -1,4 +1,4 @@
-import * as L from './leaflet/leaflet-src.esm.js';
+import * as L from '../leaflet/leaflet-src.esm.js';
 
 const redIcon = L.icon({
   iconUrl: 'leaflet/images/marker-icon-red.png',
@@ -11,22 +11,6 @@ const redIcon = L.icon({
   popupAnchor: [-3, -76],
 });
 
-function getDistanceInMetres(lat1, lon1, lat2, lon2) {
-  const R = 6371e3; // metres
-
-  const φ1 = (lat1 * Math.PI) / 180; // φ, λ in radians
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
-  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  const d = R * c; // in metres
-
-  return d;
-}
-
 function getElementsData(elements, center) {
   const elementsData = elements
     .filter((e) => e.type === 'node' || e.type === 'way')
@@ -36,7 +20,7 @@ function getElementsData(elements, center) {
           lat: e.lat,
           lon: e.lon,
           tags: e.tags,
-          distToCenter: getDistanceInMetres(e.lat, e.lon, center.lat, center.lng),
+          distToCenter: center.distanceTo(L.latLng(e.lat, e.lon)),
         };
       } else {
         const wayLat = (e.bounds.minlat + e.bounds.maxlat) / 2;
@@ -45,7 +29,7 @@ function getElementsData(elements, center) {
           lat: wayLat,
           lon: wayLon,
           tags: e.tags,
-          distToCenter: getDistanceInMetres(wayLat, wayLon, center.lat, center.lng),
+          distToCenter: center.distanceTo(L.latLng(wayLat, wayLon)),
         };
       }
     });
