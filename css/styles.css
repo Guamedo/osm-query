@@ -25,3 +25,25 @@
   cursor: pointer;
   width: 100%;
 }
+
+#error-box {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 5px 5px;
+  background-color: tomato;
+  border-radius: 5px;
+  font-family: monospace;
+}
+
+.error-msg {
+  margin: 0;
+}
+
+a.error-btn {
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}

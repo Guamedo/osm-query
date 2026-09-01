@@ -72,7 +72,7 @@ async function getDrinkingWaterFromBounds(bounds) {
 }
 
 async function main() {
-  const map = L.map('map').setView([43.264331, -2.9207012], 14);
+  const map = L.map('map').setView([43.31260800017219, -2.00148107484062], 14);
   let centerMarker = null;
 
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -115,6 +115,9 @@ async function main() {
   }
   locate();
 
+  const errorBox = document.getElementById('error-box');
+  errorBox.style.display = 'none';
+
   async function find() {
     map.eachLayer((layer) => {
       if (!layer._url && layer != centerMarker) layer.remove();
@@ -140,8 +143,11 @@ async function main() {
       }
     } catch (err) {
       console.error(err);
-
       console.warn('Error finding');
+      errorBox.style.display = 'flex';
+      setTimeout(() => {
+        errorBox.style.display = 'none';
+      }, 3000);
     } finally {
       findBtn.innerHTML = 'Find';
     }
