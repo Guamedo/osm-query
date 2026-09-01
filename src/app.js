@@ -87,6 +87,7 @@ async function main() {
   locateBtn.addEventListener('click', locate);
 
   async function locate() {
+    locateBtn.innerHTML = 'Locating...';
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -97,17 +98,22 @@ async function main() {
           centerMarker = L.marker([lat, lon], { icon: redIcon }).addTo(map);
 
           map.setView([lat, lon], 14);
+
+          locateBtn.innerHTML = 'Locate';
         },
         (error) => {
           const errors = { 1: 'Permission denied', 2: 'Position unavailable', 3: 'Request timeout' };
           alert('Error: ' + errors[error.code]);
+          locateBtn.innerHTML = 'Locate';
         },
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true },
       );
     } else {
       console.warn('Geolocation is not available in this browser');
+      locateBtn.innerHTML = 'Locate';
     }
   }
+  locate();
 
   async function find() {
     map.eachLayer((layer) => {
