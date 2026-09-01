@@ -72,7 +72,7 @@ async function getDrinkingWaterFromBounds(bounds) {
 }
 
 async function main() {
-  const map = L.map('map').setView([43.264331, -2.9207012], 14);
+  const map = L.map('map').setView([43.31260800017219, -2.00148107484062], 14);
   let centerMarker = null;
 
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -87,6 +87,7 @@ async function main() {
   locateBtn.addEventListener('click', locate);
 
   async function locate() {
+    locateBtn.innerHTML = 'Locating...';
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -97,17 +98,25 @@ async function main() {
           centerMarker = L.marker([lat, lon], { icon: redIcon }).addTo(map);
 
           map.setView([lat, lon], 14);
+
+          locateBtn.innerHTML = 'Locate';
         },
         (error) => {
           const errors = { 1: 'Permission denied', 2: 'Position unavailable', 3: 'Request timeout' };
           alert('Error: ' + errors[error.code]);
+          locateBtn.innerHTML = 'Locate';
         },
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true },
       );
     } else {
       console.warn('Geolocation is not available in this browser');
+      locateBtn.innerHTML = 'Locate';
     }
   }
+  locate();
+
+  const errorBox = document.getElementById('error-box');
+  errorBox.style.display = 'none';
 
   async function find() {
     map.eachLayer((layer) => {
@@ -134,8 +143,11 @@ async function main() {
       }
     } catch (err) {
       console.error(err);
-
       console.warn('Error finding');
+      errorBox.style.display = 'flex';
+      setTimeout(() => {
+        errorBox.style.display = 'none';
+      }, 3000);
     } finally {
       findBtn.innerHTML = 'Find';
     }
